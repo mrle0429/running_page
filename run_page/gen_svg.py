@@ -319,7 +319,7 @@ def main():
             p.years.from_year, p.years.to_year = y, y
             p.height = 55 + 1 * 43
             p.draw(drawers[args.type], os.path.join(output_dir, f"github_{str(y)}.svg"))
-        
+
         # restore original years and draw the full one
         p.years.from_year, p.years.to_year = from_year, to_year
         p.height = 55 + p.years.real_year * 43

@@ -14,8 +14,11 @@ YEAR_PATTERN = re.compile(r"^github_(\d{4})\.svg$")
 
 
 def to_iso8601_utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace(
-        "+00:00", "Z"
+    return (
+        dt.astimezone(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
     )
 
 

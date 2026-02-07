@@ -312,14 +312,14 @@ class Poster:
                 style=value_style,
             )
         )
-        
+
         # GitHub Style Legend
         # Less [color] [color] [color] [color] More
         legend_x = 65
         legend_y = self.height - 15
         box_size = 2.6
         gap = 1.0
-        
+
         d.add(
             d.text(
                 "Less",
@@ -329,19 +329,17 @@ class Poster:
             )
         )
         legend_x += 8
-        
+
         # Get colors from drawer if available
-        if hasattr(self.tracks_drawer, 'empty_color'):
+        if hasattr(self.tracks_drawer, "empty_color"):
             colors = [self.tracks_drawer.empty_color] + self.tracks_drawer.github_colors
         else:
             colors = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
 
         for color in colors:
-            d.add(
-                d.rect((legend_x, legend_y), (box_size, box_size), fill=color)
-            )
+            d.add(d.rect((legend_x, legend_y), (box_size, box_size), fill=color))
             legend_x += box_size + gap
-            
+
         d.add(
             d.text(
                 "More",
