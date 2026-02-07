@@ -120,6 +120,10 @@ class Poster:
         if self.drawer_type == "year_summary":
             # Year summary drawer handles its own layout
             self.__draw_tracks(d, XY(width - 10, height - 10), XY(5, 5))
+        elif self.drawer_type == "github":
+            self.__draw_header(d)
+            self.__draw_github_footer(d)
+            self.__draw_tracks(d, XY(width - 20, height - 30 - 30), XY(10, 30))
         elif not self.drawer_type == "plain":
             self.__draw_header(d)
             self.__draw_footer(d)
@@ -220,6 +224,132 @@ class Poster:
                     style=small_value_style,
                 )
             )
+
+        d.add(
+            d.text(
+                self.trans("STATISTICS"),
+                insert=(120, self.height - 20),
+                fill=text_color,
+                style=header_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Number") + f": {len(self.tracks)}",
+                insert=(120, self.height - 15),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Weekly") + ": " + format_float(len(self.tracks) / weeks),
+                insert=(120, self.height - 10),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Total") + ": " + self.format_distance(total_length),
+                insert=(141, self.height - 15),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Avg") + ": " + self.format_distance(average_length),
+                insert=(141, self.height - 10),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Min") + ": " + self.format_distance(min_length),
+                insert=(167, self.height - 15),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.trans("Max") + ": " + self.format_distance(max_length),
+                insert=(167, self.height - 10),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+
+    def __draw_github_footer(self, d):
+        text_color = self.colors["text"]
+        header_style = "font-size:4px; font-family:Arial"
+        value_style = "font-size:9px; font-family:Arial"
+        small_value_style = "font-size:3px; font-family:Arial"
+
+        (
+            total_length,
+            average_length,
+            min_length,
+            max_length,
+            weeks,
+        ) = self.__compute_track_statistics()
+
+        d.add(
+            d.text(
+                self.trans("Runner"),
+                insert=(10, self.height - 20),
+                fill=text_color,
+                style=header_style,
+            )
+        )
+        d.add(
+            d.text(
+                self.athlete,
+                insert=(10, self.height - 10),
+                fill=text_color,
+                style=value_style,
+            )
+        )
+        
+        # GitHub Style Legend
+        # Less [color] [color] [color] [color] More
+        legend_x = 65
+        legend_y = self.height - 15
+        box_size = 2.6
+        gap = 1.0
+        
+        d.add(
+            d.text(
+                "Less",
+                insert=(legend_x, legend_y + box_size),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
+        legend_x += 8
+        
+        # Get colors from drawer if available
+        if hasattr(self.tracks_drawer, 'empty_color'):
+            colors = [self.tracks_drawer.empty_color] + self.tracks_drawer.github_colors
+        else:
+            colors = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"]
+
+        for color in colors:
+            d.add(
+                d.rect((legend_x, legend_y), (box_size, box_size), fill=color)
+            )
+            legend_x += box_size + gap
+            
+        d.add(
+            d.text(
+                "More",
+                insert=(legend_x + 2, legend_y + box_size),
+                fill=text_color,
+                style=small_value_style,
+            )
+        )
 
         d.add(
             d.text(

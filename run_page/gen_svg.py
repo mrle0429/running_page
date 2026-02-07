@@ -277,6 +277,7 @@ def main():
         p.drawer_type = "year_summary"
     if args.type == "github":
         p.height = 55 + p.years.real_year * 43
+        p.drawer_type = "github"
     p.github_style = args.github_style
 
     if args.type == "circular":
