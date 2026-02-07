@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动统计 Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: transparent;
+            padding: 20px;
+        }
+        
+        .widget-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .stat-header {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        
+        .activity-types {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .activity-types-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+        
+        .activity-type-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .activity-type-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .activity-type-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .activity-icon {
+            font-size: 24px;
+        }
+        
+        .activity-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .activity-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 14px;
+        }
+        
+        .activity-count {
+            background: rgba(59, 130, 246, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .activity-distance {
+            background: rgba(34, 197, 94, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        @media (max-width: 600px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .stat-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div id="widget-content" class="loading">加载中...</div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                // 获取活动数据
+                const response = await fetch('/activities.json');
+                const activities = await response.json();
+                
+                // 过滤2026年的数据
+                const year = new Date().getFullYear();
+                const yearActivities = activities.filter(a => 
+                    a.start_date_local.startsWith(`${year}`)
+                );
+                
+                // 计算统计数据
+                let totalDistance = 0;
+                let totalTime = 0;
+                const activityTypes = {};
+                let streak = 0;
+                let totalHeartRate = 0;
+                let heartRateCount = 0;
+                
+                yearActivities.forEach(activity => {
+                    // 总距离
+                    totalDistance += activity.distance || 0;
+                    
+                    // 按类型统计
+                    const type = activity.type || 'Unknown';
+                    if (!activityTypes[type]) {
+                        activityTypes[type] = { count: 0, distance: 0 };
+                    }
+                    activityTypes[type].count += 1;
+                    activityTypes[type].distance += activity.distance || 0;
+                    
+                    // Streak
+                    if (activity.streak) {
+                        streak = Math.max(streak, activity.streak);
+                    }
+                    
+                    // 心率
+                    if (activity.average_heartrate) {
+                        totalHeartRate += activity.average_heartrate;
+                        heartRateCount++;
+                    }
+                });
+                
+                // 转换单位
+                const totalKm = (totalDistance / 1000).toFixed(1);
+                const avgHeartRate = heartRateCount > 0 ? Math.round(totalHeartRate / heartRateCount) : 0;
+                
+                // 运动类型映射
+                const typeIcons = {
+                    'Run': '🏃',
+                    'running': '🏃',
+                    'Hike': '🥾',
+                    'hiking': '🥾',
+                    'Ride': '🚴',
+                    'cycling': '🚴',
+                    'Walk': '🚶',
+                    'walking': '🚶',
+                    'Swim': '🏊',
+                    'swimming': '🏊'
+                };
+                
+                const typeNames = {
+                    'Run': '跑步',
+                    'running': '跑步',
+                    'Hike': '徒步',
+                    'hiking': '徒步',
+                    'Ride': '骑行',
+                    'cycling': '骑行',
+                    'Walk': '健走',
+                    'walking': '健走',
+                    'Swim': '游泳',
+                    'swimming': '游泳'
+                };
+                
+                // 排序运动类型
+                const sortedTypes = Object.entries(activityTypes)
+                    .sort((a, b) => b[1].distance - a[1].distance)
+                    .slice(0, 5);
+                
+                // 生成HTML
+                let html = `
+                    <div class="stat-card">
+                        <div class="stat-header">${year} 年运动统计</div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-value">${yearActivities.length}</span>
+                                <span class="stat-label">活动次数</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${totalKm}</span>
+                                <span class="stat-label">公里</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${streak}</span>
+                                <span class="stat-label">天连续</span>
+                            </div>
+                            ${avgHeartRate > 0 ? `
+                            <div class="stat-item">
+                                <span class="stat-value">${avgHeartRate}</span>
+                                <span class="stat-label">平均心率</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${sortedTypes.length > 0 ? `
+                        <div class="activity-types">
+                            <div class="activity-types-title">运动类型分布</div>
+                            ${sortedTypes.map(([type, stats]) => {
+                                const icon = typeIcons[type] || '🏃';
+                                const name = typeNames[type] || type;
+                                const distance = (stats.distance / 1000).toFixed(1);
+                                return `
+                                    <div class="activity-type-item">
+                                        <div class="activity-type-left">
+                                            <span class="activity-icon">${icon}</span>
+                                            <span class="activity-name">${name}</span>
+                                        </div>
+                                        <div class="activity-stats">
+                                            <span class="activity-count">${stats.count} 次</span>
+                                            <span class="activity-distance">${distance} km</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('widget-content').innerHTML = html;
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                document.getElementById('widget-content').innerHTML = 
+                    '<div class="stat-card">数据加载失败，请刷新重试</div>';
+            }
+        }
+        
+        loadStats();
+    </script>
+</body>
+</html>
