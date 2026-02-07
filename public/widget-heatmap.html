@@ -79,6 +79,12 @@
             padding: 40px;
             color: #999;
         }
+
+        .heatmap-hint {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #666;
+        }
         
         @media (max-width: 600px) {
             body {
@@ -93,40 +99,103 @@
 </head>
 <body>
     <div class="heatmap-container">
-        <div class="heatmap-title">🏃 运动热力图</div>
+        <div class="heatmap-title">运动热力图</div>
         <div class="year-selector" id="yearSelector"></div>
         <div class="heatmap-wrapper" id="heatmapContent">
             <div class="loading">加载中...</div>
         </div>
+        <div class="heatmap-hint" id="heatmapHint"></div>
     </div>
 
     <script>
-        const currentYear = new Date().getFullYear();
-        let selectedYear = currentYear;
-        
-        function createYearSelector() {
-            const years = [];
-            for (let year = 2012; year <= currentYear; year++) {
-                years.push(year);
-            }
-            years.push('Total');
-            
+        const query = new URLSearchParams(window.location.search);
+        const sourceBase = (query.get('source') || '/assets').replace(/\/+$/, '');
+        const explicitManifestUrl = query.get('manifest');
+        const manifestUrl = explicitManifestUrl || `${sourceBase}/github_manifest.json`;
+
+        let manifestCache = null;
+        let selectedYear = 'Total';
+
+        function createYearSelector(years, activeYear) {
             const selector = document.getElementById('yearSelector');
             selector.innerHTML = years.map(year => `
-                <button class="year-btn ${year === currentYear ? 'active' : ''}" 
+                <button class="year-btn ${String(year) === String(activeYear) ? 'active' : ''}" 
                         data-year="${year}"
                         onclick="loadHeatmap('${year}')">
                     ${year}
                 </button>
             `).join('');
         }
+
+        function updateHint(message) {
+            document.getElementById('heatmapHint').textContent = message;
+        }
+
+        function getInitialYear() {
+            const nowYear = String(new Date().getFullYear());
+            if (manifestCache && manifestCache.files && manifestCache.files[nowYear]) {
+                return nowYear;
+            }
+            if (
+                manifestCache &&
+                manifestCache.default_year &&
+                manifestCache.files &&
+                manifestCache.files[manifestCache.default_year]
+            ) {
+                return String(manifestCache.default_year);
+            }
+            return 'Total';
+        }
+
+        function buildFallbackManifest() {
+            const currentYear = new Date().getFullYear();
+            const files = { Total: 'github.svg' };
+            const years = ['Total'];
+            for (let year = currentYear; year >= 2012; year--) {
+                files[String(year)] = `github_${year}.svg`;
+                years.push(String(year));
+            }
+            return {
+                version: String(Date.now()),
+                default_year: String(currentYear),
+                years,
+                files,
+            };
+        }
+
+        function resolveSvgPath(year) {
+            const key = String(year);
+            const file = manifestCache?.files?.[key];
+            if (manifestCache?.urls?.[key]) {
+                return manifestCache.urls[key];
+            }
+            if (file) {
+                const suffix = manifestCache?.version ? `?v=${encodeURIComponent(manifestCache.version)}` : '';
+                return `${sourceBase}/${file}${suffix}`;
+            }
+            if (key === 'Total') {
+                return `${sourceBase}/github.svg`;
+            }
+            return `${sourceBase}/github_${key}.svg`;
+        }
+
+        async function loadManifest() {
+            const response = await fetch(manifestUrl, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`manifest load failed: ${response.status}`);
+            }
+            const manifest = await response.json();
+            if (!manifest || !manifest.files || !manifest.years) {
+                throw new Error('invalid manifest format');
+            }
+            return manifest;
+        }
         
         async function loadHeatmap(year) {
-            selectedYear = year;
+            selectedYear = String(year);
             
-            // 更新选中状态
             document.querySelectorAll('.year-btn').forEach(btn => {
-                if (btn.dataset.year === String(year)) {
+                if (btn.dataset.year === selectedYear) {
                     btn.classList.add('active');
                 } else {
                     btn.classList.remove('active');
@@ -137,10 +206,7 @@
             content.innerHTML = '<div class="loading">加载中...</div>';
             
             try {
-                // 根据年份加载对应的 SVG
-                const svgPath = year === 'Total' 
-                    ? '/assets/github.svg' 
-                    : `/assets/github_${year}.svg`;
+                const svgPath = resolveSvgPath(selectedYear);
                 
                 const response = await fetch(svgPath);
                 if (!response.ok) {
@@ -150,18 +216,42 @@
                 const svgText = await response.text();
                 content.innerHTML = `<div class="heatmap-svg">${svgText}</div>`;
             } catch (error) {
-                console.error('加载热力图失败:', error);
-                content.innerHTML = `
-                    <div class="loading" style="color: #ef4444;">
-                        ${year} 年暂无数据
-                    </div>
-                `;
+                const svgPath = resolveSvgPath(selectedYear);
+                const img = new Image();
+                img.className = 'heatmap-svg';
+                img.alt = `${selectedYear} heatmap`;
+                img.onload = () => {
+                    content.innerHTML = '';
+                    content.appendChild(img);
+                };
+                img.onerror = () => {
+                    console.error('加载热力图失败:', error);
+                    content.innerHTML = `
+                        <div class="loading" style="color: #ef4444;">
+                            ${selectedYear} 年暂无数据
+                        </div>
+                    `;
+                };
+                img.src = svgPath;
             }
         }
         
-        // 初始化
-        createYearSelector();
-        loadHeatmap(currentYear);
+        async function init() {
+            try {
+                manifestCache = await loadManifest();
+                selectedYear = getInitialYear();
+                createYearSelector(manifestCache.years, selectedYear);
+                updateHint(`数据源: ${manifestUrl}${manifestCache.updated_at ? ` | 更新: ${manifestCache.updated_at}` : ''}`);
+            } catch (error) {
+                manifestCache = buildFallbackManifest();
+                selectedYear = getInitialYear();
+                createYearSelector(manifestCache.years, selectedYear);
+                updateHint(`数据源: ${manifestUrl} (manifest 不可用，已使用回退模式)`);
+            }
+            loadHeatmap(selectedYear);
+        }
+
+        init();
     </script>
 </body>
 </html>

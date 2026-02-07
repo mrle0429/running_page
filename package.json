@@ -34,7 +34,8 @@
   "scripts": {
     "data:clean": "rm -f run_page/data.db {GPX,TCX,FIT}_OUT/* activities/* src/static/activities.json",
     "data:download:garmin": "python3 run_page/garmin_sync.py",
-    "data:analysis": "python3 run_page/gen_svg.py --from-db --type github --output assets/github.svg",
+    "data:analysis": "python3 run_page/gen_svg.py --from-db --type github --output assets/github.svg && pnpm run data:manifest:github",
+    "data:manifest:github": "python3 run_page/generate_github_manifest.py --assets-dir assets --output assets/github_manifest.json",
     "build": "vite build",
     "develop": "vite dev",
     "dev": "vite dev",
