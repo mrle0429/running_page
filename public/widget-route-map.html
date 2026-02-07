@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Route Map Widget</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 12px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, sans-serif;
+        background: transparent;
+      }
+
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .year-select {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 4px 8px;
+        color: #333;
+        background: #fff;
+      }
+
+      .map {
+        width: 100%;
+        height: 460px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .error {
+        color: #c0392b;
+      }
+
+      @media (max-width: 680px) {
+        body {
+          padding: 8px;
+        }
+
+        .map {
+          height: 320px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <h3 class="title">路线图</h3>
+        <div class="tools">
+          <select id="yearSelect" class="year-select"></select>
+        </div>
+      </div>
+      <div id="map" class="map"></div>
+      <div id="hint" class="hint">加载中...</div>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const query = new URLSearchParams(window.location.search);
+      const DATA_URL =
+        query.get("data") || "/activities.json";
+      const DEFAULT_YEAR = query.get("year") || "auto";
+      const MAP_HEIGHT = Number(query.get("height") || 460);
+
+      const COLORS = {
+        run: "#47b8e0",
+        trail: "rgb(255,153,51)",
+        cycling: "rgb(51,255,87)",
+        hiking: "rgb(151,51,255)",
+        walking: "rgb(151,51,255)",
+        swimming: "rgb(255,51,51)",
+        fallback: "rgb(224,237,94)",
+      };
+
+      const mapEl = document.getElementById("map");
+      const hintEl = document.getElementById("hint");
+      const yearSelectEl = document.getElementById("yearSelect");
+      if (Number.isFinite(MAP_HEIGHT) && MAP_HEIGHT > 0) {
+        mapEl.style.height = `${MAP_HEIGHT}px`;
+      }
+
+      const map = L.map("map", { preferCanvas: true, zoomControl: true }).setView(
+        [20, 20],
+        3
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+
+      const routeLayer = L.layerGroup().addTo(map);
+      let activities = [];
+
+      function decodePolyline(str, precision = 5) {
+        if (!str || typeof str !== "string") return [];
+        let index = 0;
+        let lat = 0;
+        let lng = 0;
+        const coordinates = [];
+        const factor = Math.pow(10, precision);
+
+        while (index < str.length) {
+          let b;
+          let shift = 0;
+          let result = 0;
+
+          do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+
+          const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+          lat += dlat;
+
+          shift = 0;
+          result = 0;
+          do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+
+          const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+          lng += dlng;
+
+          coordinates.push([lat / factor, lng / factor]);
+        }
+        return coordinates;
+      }
+
+      function simplifyPoints(points, maxPoints = 1600) {
+        if (!points || points.length <= maxPoints) return points;
+        const step = Math.ceil(points.length / maxPoints);
+        const sampled = [];
+        for (let i = 0; i < points.length; i += step) sampled.push(points[i]);
+        if (sampled[sampled.length - 1] !== points[points.length - 1]) {
+          sampled.push(points[points.length - 1]);
+        }
+        return sampled;
+      }
+
+      function colorForRun(run) {
+        const type = run.type;
+        const subtype = run.subtype;
+
+        if (type === "Run") {
+          if (subtype === "trail") return COLORS.trail;
+          return COLORS.run;
+        }
+        if (type === "cycling" || type === "Ride") return COLORS.cycling;
+        if (type === "hiking" || type === "Hike") return COLORS.hiking;
+        if (type === "walking" || type === "Walk") return COLORS.walking;
+        if (type === "swimming" || type === "Swim") return COLORS.swimming;
+        return COLORS.fallback;
+      }
+
+      function getYears(runs) {
+        const years = new Set();
+        runs.forEach((run) => {
+          if (run && run.start_date_local) years.add(run.start_date_local.slice(0, 4));
+        });
+        return Array.from(years).sort((a, b) => Number(b) - Number(a));
+      }
+
+      function pickInitialYear(years) {
+        if (DEFAULT_YEAR !== "auto") {
+          if (DEFAULT_YEAR === "Total") return "Total";
+          if (years.includes(DEFAULT_YEAR)) return DEFAULT_YEAR;
+        }
+        const nowYear = String(new Date().getFullYear());
+        if (years.includes(nowYear)) return nowYear;
+        return years[0] || "Total";
+      }
+
+      function renderYearOptions(years, active) {
+        const options = ["Total", ...years]
+          .map(
+            (year) =>
+              `<option value="${year}" ${year === active ? "selected" : ""}>${year}</option>`
+          )
+          .join("");
+        yearSelectEl.innerHTML = options;
+      }
+
+      function renderMap(year) {
+        routeLayer.clearLayers();
+        const filtered =
+          year === "Total"
+            ? activities
+            : activities.filter((run) => run.start_date_local?.slice(0, 4) === year);
+
+        const bounds = [];
+        let drawn = 0;
+
+        filtered.forEach((run) => {
+          if (!run.summary_polyline) return;
+          const decoded = decodePolyline(run.summary_polyline);
+          if (!decoded || decoded.length < 2) return;
+
+          const points = simplifyPoints(decoded);
+          const latLngs = points.map(([lat, lon]) => [lat, lon]);
+          const polyline = L.polyline(latLngs, {
+            color: colorForRun(run),
+            weight: 2,
+            opacity: 0.85,
+            smoothFactor: 1,
+            renderer: L.canvas(),
+          });
+
+          polyline.addTo(routeLayer);
+          bounds.push(...latLngs);
+          drawn += 1;
+        });
+
+        if (bounds.length > 1) {
+          map.fitBounds(bounds, { padding: [20, 20] });
+        } else {
+          map.setView([20, 20], 3);
+        }
+
+        hintEl.classList.remove("error");
+        hintEl.textContent = `数据源: ${DATA_URL} | 年份: ${year} | 路线数: ${drawn}`;
+      }
+
+      async function init() {
+        try {
+          const response = await fetch(DATA_URL, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          activities = await response.json();
+          if (!Array.isArray(activities)) {
+            throw new Error("invalid data format");
+          }
+
+          const years = getYears(activities);
+          const initialYear = pickInitialYear(years);
+          renderYearOptions(years, initialYear);
+          renderMap(initialYear);
+        } catch (err) {
+          hintEl.classList.add("error");
+          hintEl.textContent = `加载失败: ${String(err)}。请检查 data 参数和跨域配置。`;
+        }
+      }
+
+      yearSelectEl.addEventListener("change", (event) => {
+        renderMap(event.target.value);
+      });
+
+      init();
+    </script>
+  </body>
+</html>
