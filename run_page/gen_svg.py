@@ -241,7 +241,9 @@ def main():
     is_mol = args.type == "monthoflife"
     is_year_summary = args.type == "year_summary"
 
-    if not is_circular and not is_mol and not is_year_summary:
+    is_github = args.type == "github"
+
+    if not is_circular and not is_mol and not is_year_summary and not is_github:
         print(
             f"Creating poster of type {args.type} with {len(tracks)} tracks and storing it in file {args.output}..."
         )
@@ -306,6 +308,21 @@ def main():
                 drawers[args.type],
                 os.path.join(output_dir, f"year_summary_{str(y)}.svg"),
             )
+    elif is_github:
+        # Generate github svg for all years
+        years = p.years.all()[:]
+        output_dir = os.path.dirname(args.output) or "assets"
+        # store original years
+        from_year, to_year = p.years.from_year, p.years.to_year
+        for y in years:
+            p.years.from_year, p.years.to_year = y, y
+            p.height = 55 + 1 * 43
+            p.draw(drawers[args.type], os.path.join(output_dir, f"github_{str(y)}.svg"))
+        
+        # restore original years and draw the full one
+        p.years.from_year, p.years.to_year = from_year, to_year
+        p.height = 55 + p.years.real_year * 43
+        p.draw(drawers[args.type], args.output)
     else:
         p.draw(drawers[args.type], args.output)
 

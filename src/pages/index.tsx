@@ -417,9 +417,8 @@ const Index = () => {
           thisYear={year}
           animationTrigger={animationTrigger}
         />
-        {year === 'Total' ? (
-          <SVGStat />
-        ) : (
+        <SVGStat year={year} />
+        {year !== 'Total' && (
           <RunTable
             runs={runs}
             locateActivity={locateActivity}

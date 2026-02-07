@@ -17,13 +17,13 @@ class GithubDrawer(TracksDrawer):
 
     def __init__(self, the_poster: Poster):
         super().__init__(the_poster)
-        self.empty_color = "#161b22"  # GitHub dark theme empty color
+        self.empty_color = "#ebedf0"  # GitHub light theme empty color
         # GitHub green color scale
         self.github_colors = [
-            "#0e4429",  # Level 1: light green
-            "#006d32",  # Level 2: medium green
-            "#26a641",  # Level 3: bright green
-            "#39d353",  # Level 4: brightest green
+            "#9be9a8",  # Level 1: light green
+            "#40c463",  # Level 2: medium green
+            "#30a14e",  # Level 3: bright green
+            "#216e39",  # Level 4: brightest green
         ]
 
     def create_args(self, args_parser: argparse.ArgumentParser):
