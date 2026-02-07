@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import RunMap from '@/components/RunMap';
 import useActivities from '@/hooks/useActivities';
-import { useTheme, useThemeChangeCounter } from '@/hooks/useTheme';
+import { useThemeChangeCounter } from '@/hooks/useTheme';
 import {
   IViewState,
   filterAndSortRuns,
@@ -20,9 +20,9 @@ const TIANANMEN_VIEW: IViewState = {
 const WidgetRouteMap = () => {
   const { activities, years } = useActivities();
   const themeChangeCounter = useThemeChangeCounter();
-  const { theme } = useTheme();
 
   const [year, setYear] = useState('Total');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -42,6 +42,39 @@ const WidgetRouteMap = () => {
       setYear(qpYear);
     }
   }, [years]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const queryTheme = params.get('theme');
+
+    if (queryTheme === 'light' || queryTheme === 'dark') {
+      setTheme(queryTheme);
+      return;
+    }
+
+    const isDarkPreferred = window.matchMedia(
+      '(prefers-color-scheme: dark)'
+    ).matches;
+    setTheme(isDarkPreferred ? 'dark' : 'light');
+  }, []);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'running-page-theme') return;
+      if (data.theme === 'light' || data.theme === 'dark') {
+        setTheme(data.theme);
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+    };
+  }, []);
 
   const runs = useMemo(() => {
     return filterAndSortRuns(activities, year, filterYearRuns, sortDateFunc);
