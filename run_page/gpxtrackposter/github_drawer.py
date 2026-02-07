@@ -17,7 +17,14 @@ class GithubDrawer(TracksDrawer):
 
     def __init__(self, the_poster: Poster):
         super().__init__(the_poster)
-        self.empty_color = "#444444"
+        self.empty_color = "#161b22"  # GitHub dark theme empty color
+        # GitHub green color scale
+        self.github_colors = [
+            "#0e4429",  # Level 1: light green
+            "#006d32",  # Level 2: medium green  
+            "#26a641",  # Level 3: bright green
+            "#39d353",  # Level 4: brightest green
+        ]
 
     def create_args(self, args_parser: argparse.ArgumentParser):
         """Add arguments specific to github drawer"""
@@ -154,19 +161,25 @@ class GithubDrawer(TracksDrawer):
                     date_title = str(github_rect_day)
                     if date_title in self.poster.tracks_by_date:
                         tracks = self.poster.tracks_by_date[date_title]
-                        length = sum([t.length for t in tracks])
-                        distance1 = self.poster.special_distance["special_distance"]
-                        distance2 = self.poster.special_distance["special_distance2"]
-                        has_special = distance1 < self.poster.m2u(length) < distance2
-                        color = self.color(
-                            self.poster.length_range_by_date, length, has_special
-                        )
-                        if self.poster.m2u(length) >= distance2:
-                            color = self.poster.colors.get(
-                                "special2"
-                            ) or self.poster.colors.get("special")
-                        str_length = format_float(self.poster.m2u(length))
-                        date_title = f"{date_title} {str_length} {self.poster.u()}"
+                        # Use total moving time in seconds instead of distance
+                        total_seconds = sum([
+                            t.moving_dict.get("moving_time", datetime.timedelta(0)).total_seconds() 
+                            if isinstance(t.moving_dict.get("moving_time"), datetime.timedelta) 
+                            else t.moving_dict.get("moving_time", 0)
+                            for t in tracks
+                        ])
+                        
+                        # Calculate color based on time duration
+                        color = self._get_github_color_by_time(total_seconds)
+                        
+                        # Format time for display
+                        hours = int(total_seconds // 3600)
+                        minutes = int((total_seconds % 3600) // 60)
+                        if hours > 0:
+                            time_str = f"{hours}h {minutes}m"
+                        else:
+                            time_str = f"{minutes}m"
+                        date_title = f"{date_title} {time_str}"
 
                     rect = dr.rect((rect_x, rect_y), dom, fill=color)
                     rect.set_desc(title=date_title)
@@ -174,3 +187,25 @@ class GithubDrawer(TracksDrawer):
                     github_rect_day += datetime.timedelta(1)
                 rect_x += 3.5
             offset.y += 3.5 * 9 + year_size + 1.0
+    
+    def _get_github_color_by_time(self, seconds):
+        """Get GitHub-style color based on moving time in seconds.
+        
+        Uses a progressive scale:
+        - 0-30 min: Level 1 (light green)
+        - 30-60 min: Level 2 (medium green)
+        - 60-120 min: Level 3 (bright green)
+        - 120+ min: Level 4 (brightest green)
+        """
+        if seconds == 0:
+            return self.empty_color
+        
+        minutes = seconds / 60
+        if minutes <= 30:
+            return self.github_colors[0]
+        elif minutes <= 60:
+            return self.github_colors[1]
+        elif minutes <= 120:
+            return self.github_colors[2]
+        else:
+            return self.github_colors[3]
