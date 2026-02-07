@@ -21,7 +21,7 @@ class GithubDrawer(TracksDrawer):
         # GitHub green color scale
         self.github_colors = [
             "#0e4429",  # Level 1: light green
-            "#006d32",  # Level 2: medium green  
+            "#006d32",  # Level 2: medium green
             "#26a641",  # Level 3: bright green
             "#39d353",  # Level 4: brightest green
         ]
@@ -162,16 +162,25 @@ class GithubDrawer(TracksDrawer):
                     if date_title in self.poster.tracks_by_date:
                         tracks = self.poster.tracks_by_date[date_title]
                         # Use total moving time in seconds instead of distance
-                        total_seconds = sum([
-                            t.moving_dict.get("moving_time", datetime.timedelta(0)).total_seconds() 
-                            if isinstance(t.moving_dict.get("moving_time"), datetime.timedelta) 
-                            else t.moving_dict.get("moving_time", 0)
-                            for t in tracks
-                        ])
-                        
+                        total_seconds = sum(
+                            [
+                                (
+                                    t.moving_dict.get(
+                                        "moving_time", datetime.timedelta(0)
+                                    ).total_seconds()
+                                    if isinstance(
+                                        t.moving_dict.get("moving_time"),
+                                        datetime.timedelta,
+                                    )
+                                    else t.moving_dict.get("moving_time", 0)
+                                )
+                                for t in tracks
+                            ]
+                        )
+
                         # Calculate color based on time duration
                         color = self._get_github_color_by_time(total_seconds)
-                        
+
                         # Format time for display
                         hours = int(total_seconds // 3600)
                         minutes = int((total_seconds % 3600) // 60)
@@ -187,10 +196,10 @@ class GithubDrawer(TracksDrawer):
                     github_rect_day += datetime.timedelta(1)
                 rect_x += 3.5
             offset.y += 3.5 * 9 + year_size + 1.0
-    
+
     def _get_github_color_by_time(self, seconds):
         """Get GitHub-style color based on moving time in seconds.
-        
+
         Uses a progressive scale:
         - 0-30 min: Level 1 (light green)
         - 30-60 min: Level 2 (medium green)
@@ -199,7 +208,7 @@ class GithubDrawer(TracksDrawer):
         """
         if seconds == 0:
             return self.empty_color
-        
+
         minutes = seconds / 60
         if minutes <= 30:
             return self.github_colors[0]
