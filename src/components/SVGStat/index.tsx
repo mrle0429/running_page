@@ -50,12 +50,16 @@ const SVGStat = ({ year }: SVGStatProps) => {
   }, [currentYear, totalViewYear, availableTotalYears]);
 
   // Lazy load github svg based on year
-  const GithubSvg = useMemo(() => lazy(() => {
-    if (displayYear && displayYear !== 'Total') {
-      return loadSvgComponent(githubStats, `./github_${displayYear}.svg`);
-    }
-    return loadSvgComponent(totalStat, './github.svg');
-  }), [displayYear]);
+  const GithubSvg = useMemo(
+    () =>
+      lazy(() => {
+        if (displayYear && displayYear !== 'Total') {
+          return loadSvgComponent(githubStats, `./github_${displayYear}.svg`);
+        }
+        return loadSvgComponent(totalStat, './github.svg');
+      }),
+    [displayYear]
+  );
 
   return (
     <div id="svgStat" className="mt-4">

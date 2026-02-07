@@ -29,6 +29,7 @@ import {
   MAP_TILE_VENDOR,
   MAP_TILE_ACCESS_TOKEN,
   getRuntimeSingleRunColor,
+  MAP_TILE_STYLE_LIGHT,
 } from '@/utils/const';
 import {
   Coordinate,
@@ -92,6 +93,7 @@ const RunMap = ({
     () => getMapStyle(MAP_TILE_VENDOR, currentMapTheme, MAP_TILE_ACCESS_TOKEN),
     [currentMapTheme]
   );
+  const isLightMap = currentMapTheme === MAP_TILE_STYLE_LIGHT;
 
   // Mapbox GL JS requires a token even when using other vendors
   // Always use the MAPBOX_TOKEN from const.ts (user may have set their own token)
@@ -328,6 +330,18 @@ const RunMap = ({
     return USE_DASH_LINE && !isSingleRun && !isBigMap ? [2, 2] : [2, 0];
   }, [isSingleRun, isBigMap]);
 
+  // Boost route contrast when lights are on (detailed basemap visible),
+  // especially for light map styles where colorful streets can wash out lines.
+  const routeMainOpacity = useMemo(() => {
+    if (isSingleRun || isBigMap || !lights) return 1;
+    return isLightMap ? 0.92 : 0.82;
+  }, [isSingleRun, isBigMap, lights, isLightMap]);
+
+  const routeCasingOpacity = useMemo(() => {
+    if (isSingleRun || isBigMap || !lights) return 0.35;
+    return isLightMap ? 0.62 : 0.52;
+  }, [isSingleRun, isBigMap, lights, isLightMap]);
+
   const onMove = useCallback(
     ({ viewState }: { viewState: IViewState }) => {
       setViewState(viewState);
@@ -464,15 +478,29 @@ const RunMap = ({
           filter={filterCountries}
         />
         <Layer
+          id="runs2-casing"
+          type="line"
+          paint={{
+            'line-color': isLightMap ? '#0b1220' : '#f8fafc',
+            'line-width': isBigMap && lights ? 2 : 4,
+            'line-dasharray': dash,
+            'line-opacity': routeCasingOpacity,
+            'line-blur': 0,
+          }}
+          layout={{
+            'line-join': 'round',
+            'line-cap': 'round',
+          }}
+        />
+        <Layer
           id="runs2"
           type="line"
           paint={{
             'line-color': ['get', 'color'],
             'line-width': isBigMap && lights ? 1 : 2,
             'line-dasharray': dash,
-            'line-opacity':
-              isSingleRun || isBigMap || !lights ? 1 : LINE_OPACITY,
-            'line-blur': 1,
+            'line-opacity': routeMainOpacity,
+            'line-blur': 0.2,
           }}
           layout={{
             'line-join': 'round',

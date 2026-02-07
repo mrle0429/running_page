@@ -181,8 +181,8 @@ export const PROVINCE_FILL_COLOR = '#47b8e0';
 export const COUNTRY_FILL_COLOR = dark_vanilla;
 
 // Static color constants
-export const RUN_COLOR_LIGHT = '#47b8e0';
-export const RUN_COLOR_DARK = MAIN_COLOR;
+export const RUN_COLOR_LIGHT = '#0072ff';
+export const RUN_COLOR_DARK = '#a3ff12';
 
 // Single run animation colors
 export const SINGLE_RUN_COLOR_LIGHT = '#52c41a'; // Green for light theme
@@ -222,11 +222,11 @@ export const getRuntimeSingleRunColor = (): string => {
 
 // Legacy export for backwards compatibility
 export const RUN_COLOR = '#47b8e0';
-export const RUN_TRAIL_COLOR = 'rgb(255,153,51)';
-export const CYCLING_COLOR = 'rgb(51,255,87)';
-export const HIKING_COLOR = 'rgb(151,51,255)';
-export const WALKING_COLOR = HIKING_COLOR;
-export const SWIMMING_COLOR = 'rgb(255,51,51)';
+export const RUN_TRAIL_COLOR = '#ff6a00';
+export const CYCLING_COLOR = '#00c853';
+export const HIKING_COLOR = '#8a2be2';
+export const WALKING_COLOR = '#ff2da6';
+export const SWIMMING_COLOR = '#ff2e2e';
 
 // map tiles vendor, maptiler or mapbox or stadiamaps
 // if you want to use maptiler, set the access token in MAP_TILE_ACCESS_TOKEN
