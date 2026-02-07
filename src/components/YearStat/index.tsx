@@ -52,10 +52,11 @@ const YearStat = ({
   if (years.includes(year)) {
     runs = runs.filter((run) => run.start_date_local.slice(0, 4) === year);
   }
-  
+
   // 按运动类型分组统计
-  const activityTypeStats: Record<string, { count: number; distance: number }> = {};
-  
+  const activityTypeStats: Record<string, { count: number; distance: number }> =
+    {};
+
   let sumDistance = 0;
   let streak = 0;
   let sumElevationGain = 0;
@@ -65,17 +66,17 @@ const YearStat = ({
   let heartRateNullCount = 0;
   let totalMetersAvail = 0;
   let totalSecondsAvail = 0;
-  
+
   runs.forEach((run) => {
     const activityType = run.type || 'Unknown';
-    
+
     // 统计各类型活动
     if (!activityTypeStats[activityType]) {
       activityTypeStats[activityType] = { count: 0, distance: 0 };
     }
     activityTypeStats[activityType].count += 1;
     activityTypeStats[activityType].distance += run.distance || 0;
-    
+
     // 原有的总体统计
     sumDistance += run.distance || 0;
     sumElevationGain += run.elevation_gain || 0;
@@ -95,7 +96,7 @@ const YearStat = ({
       streak = Math.max(streak, run.streak);
     }
   });
-  
+
   sumDistance = parseFloat((sumDistance / M_TO_DIST).toFixed(1));
   const sumElevationGainStr = (sumElevationGain * M_TO_ELEV).toFixed(0);
   const avgPace = formatPace(totalMetersAvail / totalSecondsAvail);
@@ -103,7 +104,7 @@ const YearStat = ({
   const avgHeartRate = (heartRate / (runs.length - heartRateNullCount)).toFixed(
     0
   );
-  
+
   // 按距离排序活动类型
   const sortedActivityTypes = Object.entries(activityTypeStats)
     .sort((a, b) => b[1].distance - a[1].distance)
@@ -123,7 +124,7 @@ const YearStat = ({
         {hasHeartRate && (
           <Stat value={avgHeartRate} description=" Avg Heart Rate" />
         )}
-        
+
         {/* 运动类型分类统计 */}
         {sortedActivityTypes.length > 0 && (
           <div className="mt-4 w-full border-t-2 border-gray-200 pt-3">
@@ -134,7 +135,9 @@ const YearStat = ({
               {sortedActivityTypes.map(([type, stats]) => {
                 const icon = activityIcons[type] || '🏃';
                 const name = activityNames[type] || type;
-                const distance = parseFloat((stats.distance / M_TO_DIST).toFixed(1));
+                const distance = parseFloat(
+                  (stats.distance / M_TO_DIST).toFixed(1)
+                );
                 return (
                   <div
                     key={type}
