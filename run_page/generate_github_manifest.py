@@ -9,7 +9,6 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 YEAR_PATTERN = re.compile(r"^github_(\d{4})\.svg$")
 
 
