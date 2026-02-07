@@ -8,23 +8,21 @@ import {
   filterAndSortRuns,
   filterYearRuns,
   geoJsonForRuns,
-  getBoundsForGeoData,
   sortDateFunc,
 } from '@/utils/utils';
 
+const TIANANMEN_VIEW: IViewState = {
+  longitude: 116.3975,
+  latitude: 39.9087,
+  zoom: 3,
+};
+
 const WidgetRouteMap = () => {
-  const { activities, thisYear, years } = useActivities();
+  const { activities, years } = useActivities();
   const themeChangeCounter = useThemeChangeCounter();
   const { theme } = useTheme();
 
-  const [year, setYear] = useState(thisYear);
-
-  useEffect(() => {
-    if (!thisYear) return;
-    if (!year) {
-      setYear(thisYear);
-    }
-  }, [thisYear, year]);
+  const [year, setYear] = useState('Total');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -33,6 +31,10 @@ const WidgetRouteMap = () => {
     const qpYear = new URLSearchParams(window.location.search).get('year');
     if (!qpYear) return;
     if (qpYear === 'Total') {
+      setYear('Total');
+      return;
+    }
+    if (qpYear === 'auto') {
       setYear('Total');
       return;
     }
@@ -49,20 +51,9 @@ const WidgetRouteMap = () => {
     return geoJsonForRuns(runs);
   }, [runs, themeChangeCounter]);
 
-  const bounds = useMemo(() => {
-    return getBoundsForGeoData(geoData);
-  }, [geoData]);
-
   const [viewState, setViewState] = useState<IViewState>(() => ({
-    ...bounds,
+    ...TIANANMEN_VIEW,
   }));
-
-  useEffect(() => {
-    setViewState((prev) => ({
-      ...prev,
-      ...bounds,
-    }));
-  }, [bounds]);
 
   const changeYear = useCallback((y: string) => {
     setYear(y);
