@@ -1,11 +1,9 @@
 import datetime
 import json
 import os
-import random
-import string
-import time
+import urllib.parse
+import urllib.request
 
-from geopy.geocoders import options, Nominatim
 from sqlalchemy import (
     Column,
     Float,
@@ -22,16 +20,6 @@ from sqlalchemy.orm import sessionmaker
 Base = declarative_base()
 
 
-# random user name 8 letters
-def randomword():
-    letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for i in range(4))
-
-
-options.default_user_agent = "running_page"
-# reverse the location (lat, lon) -> location detail
-g = Nominatim(user_agent=randomword())
-
 GEOCODE_CACHE_FILE = os.getenv(
     "GEOCODE_CACHE_FILE",
     os.path.join(
@@ -40,9 +28,8 @@ GEOCODE_CACHE_FILE = os.getenv(
     ),
 )
 GEOCODE_TIMEOUT = int(os.getenv("GEOCODE_TIMEOUT", "10"))
-GEOCODE_RETRIES = int(os.getenv("GEOCODE_RETRIES", "2"))
-GEOCODE_RETRY_DELAY = float(os.getenv("GEOCODE_RETRY_DELAY", "1"))
 GEOCODE_COORD_PRECISION = int(os.getenv("GEOCODE_COORD_PRECISION", "3"))
+AMAP_REGEOCODE_URL = "https://restapi.amap.com/v3/geocode/regeo"
 
 
 def load_location_cache():
@@ -83,21 +70,62 @@ def reverse_location(start_point):
     if cached:
         return cached
 
-    latlon = f"{start_point.lat}, {start_point.lon}"
-    for attempt in range(GEOCODE_RETRIES):
-        try:
-            location = g.reverse(latlon, language="zh-CN", timeout=GEOCODE_TIMEOUT)
-            location_text = str(location) if location else ""
-            if location_text:
-                LOCATION_CACHE[cache_key] = location_text
-                save_location_cache(LOCATION_CACHE)
-            return location_text
-        except Exception as e:
-            if attempt == GEOCODE_RETRIES - 1:
-                print(f"Unable to reverse geocode {latlon}: {e}")
-                return ""
-            time.sleep(GEOCODE_RETRY_DELAY)
-    return ""
+    amap_key = os.getenv("AMAP_KEY", "")
+    if not amap_key:
+        print("Unable to reverse geocode: AMAP_KEY is not set")
+        return ""
+
+    lng, lat = start_point.lon, start_point.lat
+    try:
+        import eviltransform
+
+        if not eviltransform.outOfChina(lat, lng):
+            lat, lng = eviltransform.wgs2gcj(lat, lng)
+    except Exception as e:
+        print(f"Unable to transform coordinate {start_point.lat}, {start_point.lon}: {e}")
+
+    query = urllib.parse.urlencode(
+        {
+            "key": amap_key,
+            "location": f"{lng},{lat}",
+            "extensions": "base",
+            "radius": 1000,
+            "output": "json",
+        }
+    )
+    try:
+        with urllib.request.urlopen(
+            f"{AMAP_REGEOCODE_URL}?{query}", timeout=GEOCODE_TIMEOUT
+        ) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Unable to reverse geocode {start_point.lat}, {start_point.lon}: {e}")
+        return ""
+
+    if data.get("status") != "1":
+        print(
+            "Unable to reverse geocode "
+            f"{start_point.lat}, {start_point.lon}: "
+            f"{data.get('info', 'unknown error')}"
+        )
+        return ""
+
+    regeocode = data.get("regeocode") or {}
+    address_component = regeocode.get("addressComponent") or {}
+    location_parts = [
+        regeocode.get("formatted_address", ""),
+        address_component.get("district", ""),
+        address_component.get("city", ""),
+        address_component.get("province", ""),
+        address_component.get("country", ""),
+    ]
+    location_text = ", ".join(
+        dict.fromkeys([str(part) for part in location_parts if part])
+    )
+    if location_text:
+        LOCATION_CACHE[cache_key] = location_text
+        save_location_cache(LOCATION_CACHE)
+    return location_text
 
 
 ACTIVITY_KEYS = [
