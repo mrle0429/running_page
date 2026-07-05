@@ -1,0 +1,83 @@
+<gpx xmlns:ns3="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns2="http://www.garmin.com/xmlschemas/GpxExtensions/v3" creator="Garmin Connect" version="1.1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/11.xsd">
+  <extensions>
+<distance>46.51</distance>
+<average_hr>95.0</average_hr>
+<average_speed>2.696000099182129</average_speed>
+<start_time>2022-10-18T08:14:52+00:00</start_time>
+<end_time>2022-10-18T08:15:09.251000+00:00</end_time>
+<moving_time>15.0</moving_time>
+<elapsed_time>17.251</elapsed_time>
+</extensions>
+<metadata>
+    <link href="connect.garmin.com">
+      <text>Garmin Connect</text>
+    </link>
+    <time>2022-10-18T08:14:52.000Z</time>
+  </metadata>
+  <trk>
+    <name>朝阳区 跑步</name>
+    <type>running</type>
+    <trkseg>
+      <trkpt lat="39.8736070655286312103271484375" lon="116.4775867201387882232666015625">
+        <ele>37.59999847412109375</ele>
+        <time>2022-10-18T08:14:52.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>95</ns3:hr>
+            <ns3:cad>0</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="39.87369566224515438079833984375" lon="116.47760893218219280242919921875">
+        <ele>38.200000762939453125</ele>
+        <time>2022-10-18T08:15:00.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>93</ns3:hr>
+            <ns3:cad>62</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="39.8737374879419803619384765625" lon="116.4776152186095714569091796875">
+        <ele>38.59999847412109375</ele>
+        <time>2022-10-18T08:15:01.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>93</ns3:hr>
+            <ns3:cad>62</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="39.87390403635799884796142578125" lon="116.47758445702493190765380859375">
+        <ele>40.59999847412109375</ele>
+        <time>2022-10-18T08:15:05.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>97</ns3:hr>
+            <ns3:cad>88</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="39.8739376477897167205810546875" lon="116.47756031714379787445068359375">
+        <ele>41</ele>
+        <time>2022-10-18T08:15:06.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>100</ns3:hr>
+            <ns3:cad>89</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+      <trkpt lat="39.87396757118403911590576171875" lon="116.47752913646399974822998046875">
+        <ele>41</ele>
+        <time>2022-10-18T08:15:07.000Z</time>
+        <extensions>
+          <ns3:TrackPointExtension>
+            <ns3:hr>103</ns3:hr>
+            <ns3:cad>89</ns3:cad>
+          </ns3:TrackPointExtension>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
