@@ -82,7 +82,9 @@ def reverse_location(start_point):
         if not eviltransform.outOfChina(lat, lng):
             lat, lng = eviltransform.wgs2gcj(lat, lng)
     except Exception as e:
-        print(f"Unable to transform coordinate {start_point.lat}, {start_point.lon}: {e}")
+        print(
+            f"Unable to transform coordinate {start_point.lat}, {start_point.lon}: {e}"
+        )
 
     query = urllib.parse.urlencode(
         {
@@ -230,9 +232,8 @@ def update_or_create_activity(session, run_activity):
         else:
             start_point = run_activity.start_latlng
             if (
-                (not activity.location_country or activity.location_country == "China")
-                and start_point
-            ):
+                not activity.location_country or activity.location_country == "China"
+            ) and start_point:
                 activity.location_country = reverse_location(start_point)
             activity.name = run_activity.name
             activity.distance = float(run_activity.distance)
