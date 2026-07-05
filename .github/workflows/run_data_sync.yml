@@ -21,7 +21,13 @@ on:
       - run_page/garmin_to_strava_sync.py
       - run_page/keep_to_strava_sync.py
       - run_page/oppo_sync.py
+      - run_page/generator/db.py
+      - .github/workflows/run_data_sync.yml
       - requirements.txt
+
+concurrency:
+  group: run-data-sync-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # please change to your own config.

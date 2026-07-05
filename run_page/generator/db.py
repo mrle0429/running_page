@@ -1,6 +1,9 @@
 import datetime
+import json
+import os
 import random
 import string
+import time
 
 from geopy.geocoders import options, Nominatim
 from sqlalchemy import (
@@ -28,6 +31,73 @@ def randomword():
 options.default_user_agent = "running_page"
 # reverse the location (lat, lon) -> location detail
 g = Nominatim(user_agent=randomword())
+
+GEOCODE_CACHE_FILE = os.getenv(
+    "GEOCODE_CACHE_FILE",
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        "location_cache.json",
+    ),
+)
+GEOCODE_TIMEOUT = int(os.getenv("GEOCODE_TIMEOUT", "10"))
+GEOCODE_RETRIES = int(os.getenv("GEOCODE_RETRIES", "2"))
+GEOCODE_RETRY_DELAY = float(os.getenv("GEOCODE_RETRY_DELAY", "1"))
+GEOCODE_COORD_PRECISION = int(os.getenv("GEOCODE_COORD_PRECISION", "3"))
+
+
+def load_location_cache():
+    if not os.path.exists(GEOCODE_CACHE_FILE):
+        return {}
+    try:
+        with open(GEOCODE_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Unable to load location cache {GEOCODE_CACHE_FILE}: {e}")
+        return {}
+
+
+def save_location_cache(cache):
+    try:
+        with open(GEOCODE_CACHE_FILE, "w") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2, sort_keys=True)
+    except Exception as e:
+        print(f"Unable to save location cache {GEOCODE_CACHE_FILE}: {e}")
+
+
+LOCATION_CACHE = load_location_cache()
+
+
+def geocode_cache_key(start_point):
+    return (
+        f"{round(float(start_point.lat), GEOCODE_COORD_PRECISION)},"
+        f"{round(float(start_point.lon), GEOCODE_COORD_PRECISION)}"
+    )
+
+
+def reverse_location(start_point):
+    if not start_point:
+        return ""
+
+    cache_key = geocode_cache_key(start_point)
+    cached = LOCATION_CACHE.get(cache_key)
+    if cached:
+        return cached
+
+    latlon = f"{start_point.lat}, {start_point.lon}"
+    for attempt in range(GEOCODE_RETRIES):
+        try:
+            location = g.reverse(latlon, language="zh-CN", timeout=GEOCODE_TIMEOUT)
+            location_text = str(location) if location else ""
+            if location_text:
+                LOCATION_CACHE[cache_key] = location_text
+                save_location_cache(LOCATION_CACHE)
+            return location_text
+        except Exception as e:
+            if attempt == GEOCODE_RETRIES - 1:
+                print(f"Unable to reverse geocode {latlon}: {e}")
+                return ""
+            time.sleep(GEOCODE_RETRY_DELAY)
+    return ""
 
 
 ACTIVITY_KEYS = [
@@ -106,24 +176,8 @@ def update_or_create_activity(session, run_activity):
             start_point = run_activity.start_latlng
             location_country = getattr(run_activity, "location_country", "")
             # or China for #176 to fix
-            if not location_country and start_point or location_country == "China":
-                try:
-                    location_country = str(
-                        g.reverse(
-                            f"{start_point.lat}, {start_point.lon}", language="zh-CN"  # type: ignore
-                        )
-                    )
-                # limit (only for the first time)
-                except Exception:
-                    try:
-                        location_country = str(
-                            g.reverse(
-                                f"{start_point.lat}, {start_point.lon}",
-                                language="zh-CN",  # type: ignore
-                            )
-                        )
-                    except Exception:
-                        pass
+            if (not location_country and start_point) or location_country == "China":
+                location_country = reverse_location(start_point)
 
             activity = Activity(
                 run_id=run_activity.id,
@@ -146,6 +200,12 @@ def update_or_create_activity(session, run_activity):
             session.add(activity)
             created = True
         else:
+            start_point = run_activity.start_latlng
+            if (
+                (not activity.location_country or activity.location_country == "China")
+                and start_point
+            ):
+                activity.location_country = reverse_location(start_point)
             activity.name = run_activity.name
             activity.distance = float(run_activity.distance)
             activity.moving_time = run_activity.moving_time
